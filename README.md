@@ -7,76 +7,64 @@
 
 ```
 
-## Flat Design themes for Grub
+## Flat Design themes for Grub2.
 
-## Installation:
+## Install
 
 Usage:  `sudo ./install.sh [OPTIONS...]`
 
-|  Options:              | Description: |
-|:-----------------------|:-------------|
-| -b, --boot             | Install grub theme into `/boot/grub/themes` |
-| -t, --theme            | theme variant(s) [tela/vimix/stylish/slaze/whitesur] (default is tela)"
-| -i, --icon             | icon variant(s) [color/white/whitesur] (default is color)"
-| -s, --screen           | screen resolution variant(s) [1080p/2k/4k/ultrawide/ultrawide2k] (default is 1080p)"
-| -r, --remove [THEME]   | Uninstall selected theme |
-| -h, --help             | Show this help |
+_if no option used the terminal user interface will be show up_
 
-_If no options are used, a user interface `dialog` will show up instead_
+|  OPTIONS:          | description |
+|:-------------------|:-------------|
+| -b, --boot         | Install grub theme into /boot/grub/themes |
+| -v, --vimix        | Vimix grub theme |
+| -s, --stylish      | Stylish grub theme |
+| -t, --tela         | Tela grub theme |
+| -l, --slaze        | Slaze grub theme |
+| -w, --white        | Install white color icon version |
+| -u, --ultrawide    | Install 2560x1080 background image - not available for slaze theme|
+| -2, --2k           | Install 2k(2560x1440) background image |
+| -4, --4k           | Install 4k(3840x2160) background image |
+| -r, --remove       | Remove theme (must add theme name option) |
+| -h, --help         | Show this help |
 
-### Examples:
- - Install Tela theme on 2k display device:
-   - `sudo ./install.sh -t tela -s 2k`
+For example:
 
- - Install Tela theme into /boot/grub/themes:
-   - `sudo ./install.sh -b -t tela`
+1. Install Tela theme on 2k display device
 
- - Uninstall Tela theme:
-   - `sudo ./install.sh -r -t tela`
+    `sudo ./install.sh -t -2`
+    or
+    `sudo ./install.sh --tela --2k`
 
-## Issues / tweaks:
+2. Install Tela theme into /boot/grub/themes
 
-### Correcting display resolution:
+    `sudo ./install.sh -b -t`
 
- - On the grub screen, press `c` to enter the command line
- - Enter `vbeinfo` or `videoinfo` to check available resolutions
- - Open `/etc/default/grub`, and edit `GRUB_GFXMODE=[height]x[width]x32` to match your resolution
- - Finally, run `grub-mkconfig -o /boot/grub/grub.cfg` to update your grub config
+3. Remove Tela theme
 
-### Setting a custom background:
+    `sudo ./install.sh -r -t`
 
- - Make sure you have `imagemagick` installed, or at least something that provides `convert`
- - Find the resolution of your display, and make sure your background matches the resolution
-   - (1920x1080 -> --1080p, 2560x1080 -> --ultrawide, 2560x1440 -> --2k, 3440x1440 -> --ultrawide2k, 3840x2160 -> --4k)
- - Place your custom background inside the root of the project, and name it `background.jpg`
- - Run the installer like normal, but with -s `[YOUR_RESOLUTION]` and -t `[THEME]` and -i `[ICON]`
-   - Make sure to replace `[YOUR_RESOLUTION]` with your resolution and `[THEME]` with the theme
+## Display resolution issues
 
-## Contributing:
- - If you made changes to icons, or added a new one:
-   - Delete the existing icon, if there is one
-   - Run `cd assets; ./render-all.sh`
- - Create a pull request from your branch or fork
- - If any issues occur, report then to the [issue](https://github.com/vinceliuice/grub2-themes/issues) page
+#### Set the right resolution of your display
 
-## Screenshots:
+On the grub screen, `press c` to get the commandline, and enter `vbeinfo` or `videoinfo` on EFI boot to check what resolutions you can use, then edit `/etc/default/grub` , add your resolution `GRUB_GFXMODE=****x****x32` into it, last you can run `grub-mkconfig -o /boot/grub/grub.cfg` to update your grub.cfg.
 
-### Vimix grub theme:
+## Screenshots
 
-![Vimix](screenshots/grub-theme-vimix.jpg?raw=true)
+### Vimix grub theme
 
-### Stylish grub theme:
+![vimix grub theme](screenshots/grub-theme-vimix.jpg?raw=true)
 
-![Stylish](screenshots/grub-theme-stylish.jpg?raw=true)
+### Stylish grub theme
 
-### Tela grub theme:
+![Stylish grub theme](screenshots/grub-theme-stylish.jpg?raw=true)
 
-![Tela](screenshots/grub-theme-tela.jpg?raw=true)
+### Tela grub theme
 
-### Slaze grub theme:
+![Tela grub theme](screenshots/grub-theme-tela.jpg?raw=true)
 
-![Slaze](screenshots/grub-theme-slaze.jpg?raw=true)
+### Slaze grub theme
 
-## Documents
-http://wiki.rosalab.ru/en/index.php/Grub2_theme_/_reference
-http://wiki.rosalab.ru/en/index.php/Grub2_theme_tutorial
+![Slaze grub theme](screenshots/grub-theme-slaze.jpg?raw=true)

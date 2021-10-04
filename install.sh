@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+#!/bin/bash
 
 # Grub2 Themes
 set  -o errexit
@@ -14,10 +14,6 @@ THEME_DIR="/usr/share/grub/themes"
 REO_DIR="$(cd $(dirname $0) && pwd)"
 }
 
-THEME_VARIANTS=('tela' 'vimix' 'stylish' 'slaze' 'whitesur')
-ICON_VARIANTS=('color' 'white' 'whitesur')
-SCREEN_VARIANTS=('1080p' '2k' '4k' 'ultrawide' 'ultrawide2k')
-
 #COLORS
 CDEF=" \033[0m"                                     # default color
 CCIN=" \033[0;36m"                                  # info color
@@ -30,7 +26,7 @@ b_CGSC=" \033[1;32m"                                # bold success color
 b_CRER=" \033[1;31m"                                # bold error color
 b_CWAR=" \033[1;33m"                                # bold warning color
 
-# echo like ... with flag type and display message colors
+# echo like ...  with  flag type  and display message  colors
 prompt () {
   case ${1} in
     "-s"|"--success")
@@ -47,7 +43,7 @@ prompt () {
   esac
 }
 
-# Check command availability
+# Check command avalibility
 function has_command() {
   command -v $1 > /dev/null
 }
@@ -56,249 +52,184 @@ usage() {
   printf "%s\n" "Usage: ${0##*/} [OPTIONS...]"
   printf "\n%s\n" "OPTIONS:"
   printf "  %-25s%s\n" "-b, --boot" "install grub theme into /boot/grub/themes"
-  printf "  %-25s%s\n" "-t, --theme" "theme variant(s) [tela|vimix|stylish|slaze|whitesur] (default is tela)"
-  printf "  %-25s%s\n" "-i, --icon" "icon variant(s) [color|white|whitesur] (default is color)"
-  printf "  %-25s%s\n" "-s, --screen" "screen display variant(s) [1080p|2k|4k|ultrawide|ultrawide2k] (default is 1080p)"
+  printf "  %-25s%s\n" "-l, --slaze" "slaze grub theme"
+  printf "  %-25s%s\n" "-s, --stylish" "stylish grub theme"
+  printf "  %-25s%s\n" "-t, --tela" "tela grub theme"
+  printf "  %-25s%s\n" "-v, --vimix" "vimix grub theme"
+  printf "  %-25s%s\n" "-w, --white" "Install white icon version"
+  printf "  %-25s%s\n" "-u, --ultrawide" "Install 2560x1080 background image - not available for slaze grub theme"
+  printf "  %-25s%s\n" "-2, --2k" "Install 2k(2560x1440) background image"
+  printf "  %-25s%s\n" "-4, --4k" "Install 4k(3840x2160) background image"
   printf "  %-25s%s\n" "-r, --remove" "Remove theme (must add theme name option)"
   printf "  %-25s%s\n" "-h, --help" "Show this help"
 }
 
 install() {
-  local theme=${1}
-  local icon=${2}
-  local screen=${3}
+  if [[ ${theme} == 'slaze' ]]; then
+    local name="Slaze"
+  elif [[ ${theme} == 'stylish' ]]; then
+    local name="Stylish"
+  elif [[ ${theme} == 'tela' ]]; then
+    local name="Tela"
+  elif [[ ${theme} == 'vimix' ]]; then
+    local name="Vimix"
+  else
+    prompt -i "\n Run ./install.sh -h for help or install dialog"
+    install_dialog
+    prompt -i "\n Run ./install.sh again!"
+    exit 0
+  fi
 
-  if [[ ${screen} == 'ultrawide' && ( ${theme} == 'slaze' || ${theme} == 'whitesur' ) ]]; then
-    prompt -e "ultrawide 1080p does not support Slaze and WhiteSur theme"
-    exit 1
-  elif [[ ${screen} == 'ultrawide2k' && ( ${theme} == 'slaze' || ${theme} == 'whitesur' ) ]]; then
-    prompt -e "ultrawide 1440p does not support Slaze and WhiteSur theme"
+  if [[ ${screen} == '2k' ]]; then
+    local screen="2k"
+  elif [[ ${screen} == '4k' ]]; then
+    local screen="4k"
+  elif [[ ${screen} == '1080p_21:9' ]]; then
+    local screen="1080p_21:9"
+  else
+    local screen="1080p"
+  fi
+
+  if [[ ${screen} == '1080p_21:9' && ${name} == 'Slaze' ]]; then
+    prompt -e "ultrawide 1080p does not support Slaze theme"
     exit 1
   fi
 
-  # Check for root access and proceed if it is present
-  if [[ "$UID" -eq "$ROOT_UID" ]]; then
+  if [[ ${icon} == 'white' ]]; then
+    local icon="white"
+  else
+    local icon="color"
+  fi  
+  
+  # Checking for root access and proceed if it is present
+  if [ "$UID" -eq "$ROOT_UID" ]; then
     clear
 
-    # Create themes directory if it didn't exist
-    prompt -s "\n Checking for the existence of themes directory..."
+    # Create themes directory if not exists
+    echo -e "\n Checking for the existence of themes directory..."
 
-    [[ -d "${THEME_DIR}/${theme}" ]] && rm -rf "${THEME_DIR}/${theme}"
-    mkdir -p "${THEME_DIR}/${theme}"
+    [[ -d "${THEME_DIR}/${name}" ]] && rm -rf "${THEME_DIR}/${name}"
+    mkdir -p "${THEME_DIR}/${name}"
 
     # Copy theme
-    prompt -s "\n Installing ${theme} ${icon} ${screen} theme..."
+    prompt -i "\n Installing ${name} ${icon} ${screen} theme..."
 
-    # Don't preserve ownership because the owner will be root, and that causes the script to crash if it is ran from terminal by sudo
-    cp -a --no-preserve=ownership "${REO_DIR}/common/"{*.png,*.pf2} "${THEME_DIR}/${theme}"
-    cp -a --no-preserve=ownership "${REO_DIR}/config/theme-${screen}.txt" "${THEME_DIR}/${theme}/theme.txt"
-    cp -a --no-preserve=ownership "${REO_DIR}/backgrounds/${screen}/background-${theme}.jpg" "${THEME_DIR}/${theme}/background.jpg"
-
-    # Use custom background.jpg as grub background image
-    if [[ -f "${REO_DIR}/background.jpg" ]]; then
-      prompt -w "\n Using custom background.jpg as grub background image..."
-      cp -a --no-preserve=ownership "${REO_DIR}/background.jpg" "${THEME_DIR}/${theme}/background.jpg"
-      convert -auto-orient "${THEME_DIR}/${theme}/background.jpg" "${THEME_DIR}/${theme}/background.jpg"
-    fi
-
-    if [[ ${screen} == 'ultrawide' ]]; then
-      cp -a --no-preserve=ownership "${REO_DIR}/assets/assets-${icon}/icons-1080p" "${THEME_DIR}/${theme}/icons"
-      cp -a --no-preserve=ownership "${REO_DIR}/assets/assets-select/select-1080p/"*.png "${THEME_DIR}/${theme}"
-      cp -a --no-preserve=ownership "${REO_DIR}/assets/info-1080p.png" "${THEME_DIR}/${theme}/info.png"
-    elif [[ ${screen} == 'ultrawide2k' ]]; then
-      cp -a --no-preserve=ownership "${REO_DIR}/assets/assets-${icon}/icons-2k" "${THEME_DIR}/${theme}/icons"
-      cp -a --no-preserve=ownership "${REO_DIR}/assets/assets-select/select-2k/"*.png "${THEME_DIR}/${theme}"
-      cp -a --no-preserve=ownership "${REO_DIR}/assets/info-2k.png" "${THEME_DIR}/${theme}/info.png"
+    cp -a "${REO_DIR}/common/"* "${THEME_DIR}/${name}"
+    cp -a "${REO_DIR}/config/theme-${screen}.txt" "${THEME_DIR}/${name}/theme.txt"
+    if [[ ${screen} == '1080p_21:9' ]]; then
+      cp -a "${REO_DIR}/backgrounds/${screen}/background-${theme}.png" "${THEME_DIR}/${name}/background.png"
     else
-      cp -a --no-preserve=ownership "${REO_DIR}/assets/assets-${icon}/icons-${screen}" "${THEME_DIR}/${theme}/icons"
-      cp -a --no-preserve=ownership "${REO_DIR}/assets/assets-select/select-${screen}/"*.png "${THEME_DIR}/${theme}"
-      cp -a --no-preserve=ownership "${REO_DIR}/assets/info-${screen}.png" "${THEME_DIR}/${theme}/info.png"
+      cp -a "${REO_DIR}/backgrounds/${screen}/background-${theme}.jpg" "${THEME_DIR}/${name}/background.jpg"
     fi
+    cp -a "${REO_DIR}/assets/assets-${icon}/icons-${screen}" "${THEME_DIR}/${name}/icons"
+    cp -a "${REO_DIR}/assets/assets-${icon}/select-${screen}/"*.png "${THEME_DIR}/${name}"
 
     # Set theme
-    prompt -s "\n Setting ${theme} as default..."
+    prompt -i "\n Setting ${name} as default..."
 
     # Backup grub config
     cp -an /etc/default/grub /etc/default/grub.bak
 
-    # Fedora workaround to fix the missing unicode.pf2 file (tested on fedora 34): https://bugzilla.redhat.com/show_bug.cgi?id=1739762
-    # This occurs when we add a theme on grub2 with Fedora.
-    if has_command dnf; then
-      if grep "GRUB_FONT=" /etc/default/grub 2>&1 >/dev/null; then
-        #Replace GRUB_FONT
-        sed -i "s|.*GRUB_FONT=.*|GRUB_FONT=/boot/efi/EFI/fedora/fonts/unicode.pf2|" /etc/default/grub
-      else
-        #Append GRUB_FONT
-        echo "GRUB_FONT=/boot/efi/EFI/fedora/fonts/unicode.pf2" >> /etc/default/grub
-      fi
-    fi
+    grep "GRUB_THEME=" /etc/default/grub 2>&1 >/dev/null && sed -i '/GRUB_THEME=/d' /etc/default/grub
+    grep "GRUB_GFXMODE=" /etc/default/grub 2>&1 >/dev/null && sed -i '/GRUB_GFXMODE=/d' /etc/default/grub
 
-    if grep "GRUB_THEME=" /etc/default/grub 2>&1 >/dev/null; then
-      #Replace GRUB_THEME
-      sed -i "s|.*GRUB_THEME=.*|GRUB_THEME=\"${THEME_DIR}/${theme}/theme.txt\"|" /etc/default/grub
-    else
-      #Append GRUB_THEME
-      echo "GRUB_THEME=\"${THEME_DIR}/${theme}/theme.txt\"" >> /etc/default/grub
-    fi
+    # Edit grub config
+    echo "GRUB_THEME=\"${THEME_DIR}/${name}/theme.txt\"" >> /etc/default/grub
 
-    # Make sure the right resolution for grub is set
+    # Make sure set the right resolution for grub
     if [[ ${screen} == '1080p' ]]; then
-      gfxmode="GRUB_GFXMODE=1920x1080,auto"
-    elif [[ ${screen} == 'ultrawide' ]]; then
-      gfxmode="GRUB_GFXMODE=2560x1080,auto"
+      echo "GRUB_GFXMODE=1920x1080,auto" >> /etc/default/grub
+    elif [[ ${screen} == '1080p_21:9' ]]; then
+      echo "GRUB_GFXMODE=2560x1080,auto" >> /etc/default/grub
     elif [[ ${screen} == '4k' ]]; then
-      gfxmode="GRUB_GFXMODE=3840x2160,auto"
+      echo "GRUB_GFXMODE=3840x2160,auto" >> /etc/default/grub
     elif [[ ${screen} == '2k' ]]; then
-      gfxmode="GRUB_GFXMODE=2560x1440,auto"
-    elif [[ ${screen} == 'ultrawide2k' ]]; then
-      gfxmode="GRUB_GFXMODE=3440x1440,auto"
-    fi
-
-    if grep "GRUB_GFXMODE=" /etc/default/grub 2>&1 >/dev/null; then
-      #Replace GRUB_GFXMODE
-      sed -i "s|.*GRUB_GFXMODE=.*|${gfxmode}|" /etc/default/grub
-    else
-      #Append GRUB_GFXMODE
-      echo "${gfxmode}" >> /etc/default/grub
-    fi
-
-    if grep "GRUB_TERMINAL=console" /etc/default/grub 2>&1 >/dev/null || grep "GRUB_TERMINAL=\"console\"" /etc/default/grub 2>&1 >/dev/null; then
-      #Replace GRUB_TERMINAL
-      sed -i "s|.*GRUB_TERMINAL=.*|#GRUB_TERMINAL=console|" /etc/default/grub
-    fi
-
-    if grep "GRUB_TERMINAL_OUTPUT=console" /etc/default/grub 2>&1 >/dev/null || grep "GRUB_TERMINAL_OUTPUT=\"console\"" /etc/default/grub 2>&1 >/dev/null; then
-      #Replace GRUB_TERMINAL_OUTPUT
-      sed -i "s|.*GRUB_TERMINAL_OUTPUT=.*|#GRUB_TERMINAL_OUTPUT=console|" /etc/default/grub
-    fi
-
-    # For Kali linux
-    if [[ -f "/etc/default/grub.d/kali-themes.cfg" ]]; then
-      cp -an /etc/default/grub.d/kali-themes.cfg /etc/default/grub.d/kali-themes.cfg.bak
-      sed -i "s|.*GRUB_GFXMODE=.*|${gfxmode}|" /etc/default/grub.d/kali-themes.cfg
-      sed -i "s|.*GRUB_THEME=.*|GRUB_THEME=\"${THEME_DIR}/${theme}/theme.txt\"|" /etc/default/grub.d/kali-themes.cfg
+      echo "GRUB_GFXMODE=2560x1440,auto" >> /etc/default/grub
     fi
 
     # Update grub config
-    prompt -s "\n Updating grub config...\n"
+    prompt -i "\n Updating grub config...\n"
 
     updating_grub
-
-    prompt -w "\n * At the next restart of your computer you will see your new Grub theme: '$theme' "
   else
-    #Check if password is cached (if cache timestamp not expired yet)
-    sudo -n true 2> /dev/null && echo
+    # Error message
+    prompt -e "\n [ Error! ] -> Run me as root! "
 
-    if [[ $? == 0 ]]; then
-      #No need to ask for password
-      sudo "$0" -t ${theme} -i ${icon} -s ${screen}
-    else
-      #Ask for password
-      if [[ -n ${tui_root_login} ]] ; then
+    # persisted execution of the script as root
+    if [[ -n ${tui_root_login} ]] ; then
         if [[ -n "${theme}" && -n "${screen}" ]]; then
-          sudo -S $0 -t ${theme} -i ${icon} -s ${screen} <<< ${tui_root_login}
+            sudo -S <<< ${tui_root_login} $0 ${ORIGINAL_ARGUMENTS}
         fi
-      else
-        prompt -e "\n [ Error! ] -> Run me as root! "
-        read -p " [ Trusted ] Specify the root password : " -t ${MAX_DELAY} -s
-
-        sudo -S echo <<< $REPLY 2> /dev/null && echo
-
-        if [[ $? == 0 ]]; then
-          #Correct password, use with sudo's stdin
-          sudo -S "$0" -t ${theme} -i ${icon} -s ${screen} <<< ${REPLY}
-        else
-          #block for 3 seconds before allowing another attempt
-          sleep 3
-          prompt -e "\n [ Error! ] -> Incorrect password!\n"
-          exit 1
+    else
+        read -p "[ Trusted ] Specify the root password : " -t${MAX_DELAY} -s
+        [[ -n "$REPLY" ]] && {
+        if [[ -n "${theme}" && -n "${screen}" ]]; then
+            sudo -S <<< $REPLY $0 ${ORIGINAL_ARGUMENTS}
         fi
-      fi
+        } || {
+             operation_canceled
+        }
     fi
+
  fi
 }
 
 run_dialog() {
   if [[ -x /usr/bin/dialog ]]; then
-    if [[ "$UID" -ne "$ROOT_UID"  ]]; then
-      #Check if password is cached (if cache timestamp not expired yet)
-      sudo -n true 2> /dev/null && echo
-
-      if [[ $? == 0 ]]; then
-        #No need to ask for password
-        sudo $0
-      else
-        #Ask for password
-        tui_root_login=$(dialog --backtitle ${Project_Name} \
-        --title  "ROOT LOGIN" \
-        --insecure \
-        --passwordbox  "require root permission" 8 50 \
-        --output-fd 1 )
-
-        sudo -S echo <<< $tui_root_login 2> /dev/null && echo
-
-        if [[ $? == 0 ]]; then
-          #Correct password, use with sudo's stdin
-          sudo -S "$0" <<< $tui_root_login
-        else
-          #block for 3 seconds before allowing another attempt
-          sleep 3
-          clear
-          prompt -e "\n [ Error! ] -> Incorrect password!\n"
-          exit 1
-        fi
-      fi
-    fi
-
+    tui_root_login=$(dialog --backtitle ${Project_Name} \
+          --title  "ROOT LOGIN" \
+          --insecure \
+          --passwordbox  "require  root  permission" 8 50 \
+          --output-fd 1 )
+    [[  -z ${tui_root_login} ]]  &&   exit  ${UID} 
+    sudo -S  <<<  $tui_root_login   $0 
+    test $? -eq 0  || { 
+        prompt -e "\n [ Error! ] -> wrong passwords"
+        exit  1 
+    }
     tui=$(dialog --backtitle ${Project_Name} \
     --radiolist "Choose your Grub theme : " 15 40 5 \
       1 "Vimix Theme" off  \
       2 "Tela Theme" on \
       3 "Stylish Theme" off  \
-      4 "Slaze Theme" off  \
-      5 "WhiteSur Theme" off --output-fd 1 )
+      4 "Slaze Theme" off --output-fd 1 )
       case "$tui" in
-        1) theme="vimix"      ;;
-        2) theme="tela"       ;;
-        3) theme="stylish"    ;;
-        4) theme="slaze"      ;;
-        5) theme="whitesur"   ;;
+        1) theme="vimix"     ;;
+        2) theme="tela"      ;;
+        3) theme="stylish"   ;;
+        4) theme="slaze"     ;;
         *) operation_canceled ;;
      esac
 
     tui=$(dialog --backtitle ${Project_Name} \
     --radiolist "Choose icon style : " 15 40 5 \
       1 "white" off \
-      2 "color" on \
-      3 "whitesur" off --output-fd 1 )
+      2 "color" on --output-fd 1 )
       case "$tui" in
-        1) icon="white"       ;;
-        2) icon="color"       ;;
-        3) icon="whitesur"    ;;
+        1) icon="white"      ;;
+        2) icon="color"      ;;
         *) operation_canceled ;;
      esac
 
     tui=$(dialog --backtitle ${Project_Name} \
     --radiolist "Choose your Display Resolution : " 15 40 5 \
-      1 "1080p (1920x1080)" on  \
-      2 "1080p ultrawide (2560x1080)" off  \
-      3 "2k (2560x1440)" off \
-      4 "4k (3840x2160)" off \
-      5 "1440p ultrawide (3440x1440)" off --output-fd 1 )
+      1 "1080p" on  \
+      2 "1080p ultrawide" off  \
+      3 "2k" off \
+      4 "4k" off --output-fd 1 )
       case "$tui" in
-        1) screen="1080p"       ;;
-        2) screen="ultrawide"   ;;
-        3) screen="2k"          ;;
-        4) screen="4k"          ;;
-        5) screen="ultrawide2k" ;;
-        *) operation_canceled   ;;
+        1) screen="1080p"    ;;
+        2) screen="1080p_21:9"  ;;
+        3) screen="2k"       ;;
+        4) screen="4k"       ;;
+        *) operation_canceled ;;
      esac
   fi
 }
 
 operation_canceled() {
   clear
-  prompt -i "\n Operation canceled by user, Bye!"
+  prompt  -i "\n Operation canceled by user, Bye!"
   exit 1
 }
 
@@ -310,22 +241,17 @@ updating_grub() {
   elif has_command zypper; then
     grub2-mkconfig -o /boot/grub2/grub.cfg
   elif has_command dnf; then
-    if [[ -f /boot/efi/EFI/fedora/grub.cfg ]]; then
-      prompt -i "Find config file on /boot/efi/EFI/fedora/grub.cfg ...\n"
-      grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg
-    elif [[ -f /boot/grub2/grub.cfg ]]; then
-      prompt -i "Find config file on /boot/grub2/grub.cfg ...\n"
-      grub2-mkconfig -o /boot/grub2/grub.cfg
-    fi
+    grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg
   fi
 
   # Success message
   prompt -s "\n * All done!"
+  prompt -w "\n * At the next restart of your computer you will see your new Grub theme: '$theme' "
 }
 
 install_dialog() {
   if [ ! "$(which dialog 2> /dev/null)" ]; then
-    prompt -w "\n 'dialog' need to be installed for this shell"
+    prompt -i "\n 'dialog' needs to be installed for this shell"
     if has_command zypper; then
       sudo zypper in dialog
     elif has_command apt-get; then
@@ -341,235 +267,131 @@ install_dialog() {
 }
 
 remove() {
-  local theme=${1}
+  if [[ ${theme} == 'slaze' ]]; then
+    local name="Slaze"
+  elif [[ ${theme} == 'stylish' ]]; then
+    local name="Stylish"
+  elif [[ ${theme} == 'tela' ]]; then
+    local name="Tela"
+  elif [[ ${theme} == 'vimix' ]]; then
+    local name="Vimix"
+  else
+    prompt -i "\n Run ./install.sh -h for help!"
+    exit 0
+  fi
 
-  # Check for root access and proceed if it is present
+  # Checking for root access and proceed if it is present
   if [ "$UID" -eq "$ROOT_UID" ]; then
     echo -e "\n Checking for the existence of themes directory..."
-    if [[ -d "${THEME_DIR}/${theme}" ]]; then
-      rm -rf "${THEME_DIR}/${theme}"
+    if [[ -d "${THEME_DIR}/${name}" ]]; then
+      rm -rf "${THEME_DIR}/${name}"
     else
-      prompt -e "\n ${theme} grub theme not exist!"
+      prompt -i "\n ${name} grub theme not exist!"
       exit 0
     fi
 
     # Backup grub config
-    if [[ -f "/etc/default/grub.bak" ]]; then
+    if [[ -f /etc/default/grub.bak ]]; then
       rm -rf /etc/default/grub && mv /etc/default/grub.bak /etc/default/grub
     else
-      prompt -e "\n grub.bak not exist!"
+      prompt -i "\n grub.bak not exist!"
       exit 0
     fi
 
-    # For Kali linux
-    if [[ -f "/etc/default/grub.d/kali-themes.cfg.bak" ]]; then
-      rm -rf /etc/default/grub.d/kali-themes.cfg && mv /etc/default/grub.d/kali-themes.cfg.bak /etc/default/grub.d/kali-themes.cfg
-    fi
-
     # Update grub config
-    prompt -s "\n Resetting grub theme...\n"
-
+    prompt -i "\n Resetting grub theme...\n"
     updating_grub
 
   else
-    #Check if password is cached (if cache timestamp not expired yet)
-    sudo -n true 2> /dev/null && echo
+    # Error message
+    prompt -e "\n [ Error! ] -> Run me as root "
 
-    if [[ $? == 0 ]]; then
-      #No need to ask for password
-      sudo "$0" "${PROG_ARGS[@]}"
-    else
-      #Ask for password
-      prompt -e "\n [ Error! ] -> Run me as root! "
-      read -p " [ Trusted ] Specify the root password : " -t ${MAX_DELAY} -s
-
-      sudo -S echo <<< $REPLY 2> /dev/null && echo
-
-      if [[ $? == 0 ]]; then
-        #Correct password, use with sudo's stdin
-        sudo -S "$0" "${PROG_ARGS[@]}" <<< $REPLY
-      else
-        #block for 3 seconds before allowing another attempt
-        sleep 3
-        clear
-        prompt -e "\n [ Error! ] -> Incorrect password!\n"
-        exit 1
+    # persisted execution of the script as root
+    read -p "[ trusted ] specify the root password : " -t${MAX_DELAY} -s
+    [[ -n "$REPLY" ]] && {
+      if [[ -n "${theme}" ]]; then
+        sudo -S <<< $REPLY $0 --remove --${theme}
       fi
-    fi
+    } || {
+      operation_canceled
+    }
   fi
 }
 
-dialog_installer() {
-  if [[ ! -x /usr/bin/dialog ]];  then
-    if [[ $UID -ne $ROOT_UID ]];  then
-      #Check if password is cached (if cache timestamp not expired yet)
-      sudo -n true 2> /dev/null && echo
-
-      if [[ $? == 0 ]]; then
-        #No need to ask for password
-        exec sudo $0
-      else
-        #Ask for password
-        prompt -e "\n [ Error! ] -> Run me as root! "
-        read -p " [ Trusted ] Specify the root password : " -t ${MAX_DELAY} -s
-
-        sudo -S echo <<< $REPLY 2> /dev/null && echo
-
-        if [[ $? == 0 ]]; then
-          #Correct password, use with sudo's stdin
-          sudo $0 <<< $REPLY
-        else
-          #block for 3 seconds before allowing another attempt
-          sleep 3
-          prompt -e "\n [ Error! ] -> Incorrect password!\n"
-          exit 1
-        fi
-      fi
-    fi
-    install_dialog
-  fi
+# show terminal user interface for better use
+if [[ $# -lt 1 ]] && [[ $UID -ne $ROOT_UID ]] && [[ -x /usr/bin/dialog ]] ; then
   run_dialog
-  install "${theme}" "${icon}" "${screen}"
-}
+fi
 
-while [[ $# -gt 0 ]]; do
-  PROG_ARGS+=("${1}")
-  dialog='false'
+if [[ $# -lt 1 ]] && [[ $UID -ne $ROOT_UID ]] && [[ ! -x /usr/bin/dialog ]] ;  then
+  # Error message
+  prompt -e "\n [ Error! ] -> Run me as root! "
+
+  # persisted execution of the script as root
+  read -p "[ Trusted ] Specify the root password : " -t${MAX_DELAY} -s
+  [[ -n "$REPLY" ]]&& {
+   exec sudo -S <<< $REPLY $0
+  }|| {
+    operation_canceled
+  }
+fi
+
+while [[ $# -ge 1 ]]; do
+  ORIGINAL_ARGUMENTS="$ORIGINAL_ARGUMENTS $1"
   case "${1}" in
     -b|--boot)
       THEME_DIR="/boot/grub/themes"
-      shift 1
+      ;;
+    -l|--slaze)
+      theme='slaze'
+      ;;
+    -s|--stylish)
+      theme='stylish'
+      ;;
+    -t|--tela)
+      theme='tela'
+      ;;
+    -v|--vimix)
+      theme='vimix'
+      ;;
+    -w|--white)
+      icon='white'
+      ;;
+    -c|--color)
+      icon='color'
+      ;;
+    -1|--1080p)
+      screen='1080p'
+      ;;
+    -2|--2k)
+      screen='2k'
+      ;;
+    -4|--4k)
+      screen='4k'
+      ;;
+    -u|--ultrawide|--1080p_21:9)
+      screen='1080p_21:9'
       ;;
     -r|--remove)
       remove='true'
-      shift 1
-      ;;
-    -t|--theme)
-      shift
-      for theme in "${@}"; do
-        case "${theme}" in
-          tela)
-            themes+=("${THEME_VARIANTS[0]}")
-            shift
-            ;;
-          vimix)
-            themes+=("${THEME_VARIANTS[1]}")
-            shift
-            ;;
-          stylish)
-            themes+=("${THEME_VARIANTS[2]}")
-            shift
-            ;;
-          slaze)
-            themes+=("${THEME_VARIANTS[3]}")
-            shift
-            ;;
-          whitesur)
-            themes+=("${THEME_VARIANTS[4]}")
-            shift
-            ;;
-          -*|--*)
-            break
-            ;;
-          *)
-            prompt -e "ERROR: Unrecognized theme variant '$1'."
-            prompt -i "Try '$0 --help' for more information."
-            exit 1
-            ;;
-        esac
-      done
-      ;;
-    -i|--icon)
-      shift
-      for icon in "${@}"; do
-        case "${icon}" in
-          color)
-            icons+=("${ICON_VARIANTS[0]}")
-            shift
-            ;;
-          white)
-            icons+=("${ICON_VARIANTS[1]}")
-            shift
-            ;;
-          whitesur)
-            icons+=("${ICON_VARIANTS[2]}")
-            shift
-            ;;
-          -*|--*)
-            break
-            ;;
-          *)
-            prompt -e "ERROR: Unrecognized icon variant '$1'."
-            prompt -i "Try '$0 --help' for more information."
-            exit 1
-            ;;
-        esac
-      done
-      ;;
-    -s|--screen)
-      shift
-      for screen in "${@}"; do
-        case "${screen}" in
-          1080p)
-            screens+=("${SCREEN_VARIANTS[0]}")
-            shift
-            ;;
-          2k)
-            screens+=("${SCREEN_VARIANTS[1]}")
-            shift
-            ;;
-          4k)
-            screens+=("${SCREEN_VARIANTS[2]}")
-            shift
-            ;;
-          ultrawide)
-            screens+=("${SCREEN_VARIANTS[3]}")
-            shift
-            ;;
-          ultrawide2k)
-            screens+=("${SCREEN_VARIANTS[4]}")
-            shift
-            ;;
-          -*|--*)
-            break
-            ;;
-          *)
-            prompt -e "ERROR: Unrecognized icon variant '$1'."
-            prompt -i "Try '$0 --help' for more information."
-            exit 1
-            ;;
-        esac
-      done
       ;;
     -h|--help)
       usage
       exit 0
       ;;
     *)
-      prompt -e "ERROR: Unrecognized installation option '$1'."
-      prompt -i "Try '$0 --help' for more information."
+      prompt  -e "\n ERROR: Unrecognized installation option '$1'."
+      prompt  -i "Try '$0 --help' for more information."
       exit 1
       ;;
   esac
+  shift
 done
 
-# Show terminal user interface for better use
-if [[ "${dialog:-}" == 'false' ]]; then
-  if [[ "${remove:-}" != 'true' ]]; then
-    for theme in "${themes[@]-${THEME_VARIANTS[0]}}"; do
-      for icon in "${icons[@]-${ICON_VARIANTS[0]}}"; do
-        for screen in "${screens[@]-${SCREEN_VARIANTS[0]}}"; do
-          install "${theme}" "${icon}" "${screen}"
-        done
-      done
-    done
-  elif [[ "${remove:-}" == 'true' ]]; then
-    for theme in "${themes[@]-${THEME_VARIANTS[0]}}"; do
-      remove "${theme}"
-    done
-  fi
-  else
-  dialog_installer
+if [[ "${remove:-}" != 'true' ]]; then
+  install
+elif [[ "${remove:-}" == 'true' ]]; then
+  remove
 fi
 
-exit 1
+exit 0
